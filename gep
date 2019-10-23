@@ -1,0 +1,199 @@
+#!/usr/bin/python3
+#
+#
+
+import time
+import serial
+import struct
+import sys
+from enum import Enum
+
+SERIAL_DEV='/dev/ttyUSB0'
+BAUD_RATE=115200
+BYTES_PER_LINE=32
+
+def print_data(data):
+    def chunks(l, n):
+        """Yield successive n-sized chunks from l."""
+        for i in range(0, len(l), n):
+            yield l[i:i + n]
+
+
+    header=" addr |"+"".join([" {:2d}".format(i) for i in range(BYTES_PER_LINE)])
+    print(header)
+    print(' '+'-'*(len(header)-1))
+
+    base=0
+    for c in chunks(data,BYTES_PER_LINE):
+        print(" {:4d} |".format(base)+"".join([" {:02x}".format(b) for b in c]))
+        base += BYTES_PER_LINE
+
+class Command(Enum):
+    READ=1
+    WRITE=2
+    CLEAR=3
+
+class Response(Enum):
+    ACK=10
+    ERROR=20
+
+class SerialComm:
+    def __init__(self,ser):
+        self._ser = ser
+
+    def write_u8(self,v):
+        b = struct.pack('<B', v)
+        self._ser.write(b)
+
+    def read_u8(self):
+        b = self._ser.read(1)
+        return struct.unpack('<B', b)[0]
+
+    def write_u16(self,v):
+        bs = struct.pack('<H', v)
+        self._ser.write(bs)
+
+    def read_u16(self):
+        bs = self._ser.read(2)
+        return struct.unpack('<H', b)[0]
+
+    def write_cmd(self,cmd):
+        self.write_u8(cmd.value)
+
+    def read_cmd(self):
+        return Command(self.read_u8())
+
+    def check_ack(self):
+        resp = Response(self.read_u8())
+        if resp != Response.ACK:
+            raise Exception('Bad response')
+
+    def write_ack(self):
+        resp = Response.ACK
+        self.write_u8(resp.value)
+
+    def process_read(self, offset, nbytes):
+        self.write_cmd(Command.READ)
+        self.write_u16(offset)
+        self.write_u16(nbytes)
+        self.check_ack()
+        data = self._ser.read(nbytes)
+        self.write_ack()
+        return data
+
+    def process_clear(self):
+        self.write_cmd(Command.CLEAR)
+        self.check_ack()
+
+    def process_write(self, offset, nbytes, data):
+        self.write_cmd(Command.WRITE)
+        self.write_u16(offset)
+        self.write_u16(nbytes)
+        self.check_ack()
+        self._ser.write(data)
+        self.check_ack()
+
+def print_usage():
+    print("Usage: {} <CMD>".format(sys.argv[0]))
+    print()
+    print("List of valid commands:")
+    print("    read [-fmt] <offset> <nbytes>")
+    print("        Read <nbytes> bytes, starting from address <offset>.")
+    print("        The output is written to STDOUT. If the flag -fmt is given,")
+    print("        data is printed in a formatted table.")
+    print()
+    print("    write <offset> <nbytes> [<filename>]")
+    print("        Write <nbytes> bytes, starting at address <offset>.")
+    print("        Data is read from the file <filename>, or, if <filename>")
+    print("        is absent, is data read from STDIN.")
+    print()
+    print("    clear")
+    print("        Clears the entire EEPROM with 0xff bytes.")
+
+def bail(msg):
+    print(msg)
+    print()
+    print_usage()
+    sys.exit(1)
+def parse_size_args(args):
+    try:
+        offset = int(args[0])
+    except:
+        bail("Invalid argument given, expected positive integer <offset>")
+
+    if offset < 0:
+        bail("<offset> cannot be negative")
+
+    try:
+        nbytes = int(args[1])
+    except:
+        bail("Invalid argument given, expected positive integer <nbytes>")
+
+    if not nbytes > 0:
+        bail("<nbytes> must be greater than 0")
+
+    return offset,nbytes
+
+
+if len(sys.argv) < 2:
+    bail("No command given.")
+
+if sys.argv[1] == '-h':
+    print_usage()
+    sys.exit(0)
+
+if sys.argv[1] == 'read':
+    args = sys.argv[2:]
+
+    format_table=False
+    if len(args) > 0 and args[0] == '-fmt':
+        args = args[1:]
+        format_table = True
+
+    if len(args) < 2:
+        bail("Too few arguments for 'read' command")
+    elif len(args) > 2:
+        bail("Too many arguments for 'read' command")
+
+    offset,nbytes = parse_size_args(args)
+
+    with serial.Serial(SERIAL_DEV,BAUD_RATE) as ser:
+        comm = SerialComm(ser)
+        data = comm.process_read(offset,nbytes)
+        if format_table:
+            print_data(data)
+        else:
+            sys.stdout.buffer.write(data)
+
+elif sys.argv[1] == 'write':
+    args = sys.argv[2:]
+
+    if len(args) < 2:
+        bail("Too few arguments for 'write' command")
+
+    offset,nbytes = parse_size_args(args)
+
+    if len(args) > 2:
+        filename = args[2]
+        if not os.path.exists(filename) or not os.path.isfile(filename):
+            bail("{} is not a valid file".format(filename))
+
+        with open(filename, "rb") as fp:
+            data = fp.read()
+            if len(data) != nbytes:
+                bail("Size of file '{}' is incompatible with nbytes={} given".format(len(data),nbytes))
+    else:
+        data = sys.stdin.buffer.read(nbytes)
+
+    with serial.Serial(SERIAL_DEV,BAUD_RATE) as ser:
+        comm = SerialComm(ser)
+        comm.process_write(offset,nbytes,data)
+
+elif sys.argv[1] == 'clear':
+    with serial.Serial(SERIAL_DEV,BAUD_RATE) as ser:
+        comm = SerialComm(ser)
+        comm.process_clear()
+else:
+    bail("Invalid command '{}' given.".format(sys.argv[1]))
+
+sys.exit(0)
