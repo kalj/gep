@@ -5,6 +5,7 @@ enum Command {
   READ=1,
   WRITE=2,
   CLEAR=3,
+  HANDSHAKE=4,
 };
 
 enum Response {

@@ -32,6 +32,7 @@ class Command(Enum):
     READ=1
     WRITE=2
     CLEAR=3
+    HANDSHAKE=4
 
 class Response(Enum):
     ACK=10
@@ -80,6 +81,18 @@ class SerialComm:
     def write_ack(self):
         resp = Response.ACK
         self.write_u8(resp.value)
+
+    def process_handshake(self):
+        key = 0x12345678;
+        ref = (~key) & 0xffffffff;
+        self.write_cmd(Command.HANDSHAKE)
+        self.write_u32(key)
+        self.check_ack()
+        ans = self.read_u32()
+        if ans == ref:
+            self.write_ack()
+        else:
+            raise Exception("Failed performing handshake, mismatching data")
 
     def process_read(self, offset, nbytes):
         self.write_cmd(Command.READ)
@@ -203,6 +216,10 @@ elif sys.argv[1] == 'clear':
     with serial.Serial(SERIAL_DEV,BAUD_RATE) as ser:
         comm = SerialComm(ser)
         comm.process_clear()
+elif sys.argv[1] == "handshake":
+    with serial.Serial(SERIAL_DEV,BAUD_RATE) as ser:
+        comm = SerialComm(ser)
+        comm.process_handshake()
 else:
     bail("Invalid command '{}' given.".format(sys.argv[1]))
 

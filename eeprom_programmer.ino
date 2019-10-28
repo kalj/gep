@@ -47,6 +47,17 @@ void process_cmd()
 
     Command cmd = read_cmd();
     switch(cmd) {
+    case HANDSHAKE:
+      {
+        char msgbuf[40];
+        log_println("Received HANDSHAKE command");
+        uint32_t data = read_u32();
+        write_ack();
+        data = ~data;
+        write_u32(data);
+        check_ack();
+      }
+      break;
     case READ:
       {
         log_println("Received READ command");
