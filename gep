@@ -55,7 +55,15 @@ class SerialComm:
 
     def read_u16(self):
         bs = self._ser.read(2)
-        return struct.unpack('<H', b)[0]
+        return struct.unpack('<H', bs)[0]
+
+    def write_u32(self,v):
+        bs = struct.pack('<I', v)
+        self._ser.write(bs)
+
+    def read_u32(self):
+        bs = self._ser.read(4)
+        return struct.unpack('<I', bs)[0]
 
     def write_cmd(self,cmd):
         self.write_u8(cmd.value)
@@ -64,7 +72,8 @@ class SerialComm:
         return Command(self.read_u8())
 
     def check_ack(self):
-        resp = Response(self.read_u8())
+        b = self.read_u8()
+        resp = Response(b)
         if resp != Response.ACK:
             raise Exception('Bad response')
 
@@ -115,6 +124,7 @@ def bail(msg):
     print()
     print_usage()
     sys.exit(1)
+
 def parse_size_args(args):
     try:
         offset = int(args[0])
