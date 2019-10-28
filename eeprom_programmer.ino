@@ -8,35 +8,35 @@
 
 byte data[1024];
 
-void ep_read(int n_bytes)
+void gep_read(int n_bytes)
 {
   for(int i=0; i<n_bytes; i++) {
     data[i] = read_byte(i);
   }
 }
 
-void ep_write_data(int n_bytes) {
+void gep_write_data(int n_bytes) {
   for(int i=0; i<n_bytes; i++) {
     write_byte(i,data[i]);
   }
 }
 
-void ep_fill(byte v, int n_bytes) {
+void gep_fill(byte v, int n_bytes) {
   for(int i=0; i<n_bytes; i++) {
     data[i] = v;
   }
-  ep_write_data(n_bytes);
+  gep_write_data(n_bytes);
 }
 
-void ep_clear(int n_bytes) {
-  ep_fill(0,n_bytes);
+void gep_clear(int n_bytes) {
+  gep_fill(0,n_bytes);
 }
 
-void ep_set_range(int n_bytes) {
+void gep_set_range(int n_bytes) {
   for(int i=0; i<n_bytes; i++) {
     data[i] = i;
   }
-  ep_write_data(n_bytes);
+  gep_write_data(n_bytes);
 }
 
 void process_cmd()
