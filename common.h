@@ -1,18 +1,20 @@
-#define STATUS_LED 13
+#include "log.h"
+
+#define STATUS_LED_PIN 13
 
 void status_init()
 {
-  pinMode(STATUS_LED,OUTPUT);
+  pinMode(STATUS_LED_PIN,OUTPUT);
 }
 
 void status_set(bool status)
 {
-  digitalWrite(STATUS_LED, status ? HIGH : LOW);
+  digitalWrite(STATUS_LED_PIN, status ? HIGH : LOW);
 }
 
 void error(const char *msg) {
   while(true) {
-    Serial.println(msg);
+    log_println(msg);
     status_set(false);
     delay(250);
     status_set(true);

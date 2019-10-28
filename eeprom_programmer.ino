@@ -42,12 +42,14 @@ void ep_set_range(int n_bytes) {
 void process_cmd()
 {
   if(scom_available()) {
+    log_println("serial data available");
     status_set(true);
 
     Command cmd = read_cmd();
     switch(cmd) {
     case READ:
       {
+        log_println("Received READ command");
         int offset = (int)read_u16();
         long nbytes = (long)read_u16();
         write_ack();
@@ -57,6 +59,7 @@ void process_cmd()
       break;
     case WRITE:
       {
+        log_println("Received WRITE command");
         int offset = (int)read_u16();
         long nbytes = (long)read_u16();
         write_ack();
@@ -65,6 +68,7 @@ void process_cmd()
       }
       break;
     case CLEAR:
+      log_println("Received CLEAR command");
       clear_memory();
       write_ack();
       break;
@@ -78,9 +82,10 @@ void process_cmd()
 
 void setup()
 {
+  log_init();
+  status_init();
   scom_init();
   eeprom_init();
-  status_init();
 
   status_set(true);
   delay(1000);
