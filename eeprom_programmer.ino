@@ -1,67 +1,17 @@
+#include "common.h"
 #include "eeprom.h"
+#include "scom.h"
 
 // ----------------------------------------
 // High-level functions
 // ----------------------------------------
 
 byte data[1024];
-char buf[80];
-
-#define BYTES_PER_LINE 16
 
 void ep_read(int n_bytes)
 {
   for(int i=0; i<n_bytes; i++) {
     data[i] = read_byte(i);
-  }
-}
-
-void ep_dump(int n_bytes)
-{
-  int len = sprintf(buf," addr |");
-  for(int i=0; i< BYTES_PER_LINE; i++) {
-    len += sprintf(buf+len," %2d",i);
-  }
-  Serial.println(buf);
-
-  for(int base=0; base<n_bytes; base += BYTES_PER_LINE) {
-    len = sprintf(buf," %4d |",base);
-    for(int i=0; i< BYTES_PER_LINE && (base+i)<n_bytes; i++) {
-      byte b = read_byte(base+i);
-      len += sprintf(buf+len," %02x",b);
-    }
-    Serial.println(buf);
-  }
-}
-
-void ep_read_and_dump(int n_bytes)
-{
-  ep_read(n_bytes);
-  int len = sprintf(buf," addr |");
-  for(int i=0; i< BYTES_PER_LINE; i++) {
-    len += sprintf(buf+len," %2d",i);
-  }
-  Serial.println(buf);
-
-  for(int base=0; base<n_bytes; base += BYTES_PER_LINE) {
-    len = sprintf(buf," %4d |",base);
-    for(int i=0; i< BYTES_PER_LINE && (base+i)<n_bytes; i++) {
-      len += sprintf(buf+len," %02x",data[base+i]);
-    }
-    Serial.println(buf);
-  }
-}
-
-void ep_bindump(int n_bytes)
-{
-  Serial.println(" addr |     data");
-
-  for(int a=0; a<n_bytes; a++) {
-    byte byt = read_byte(a);
-    sprintf(buf," %4d | %1d%1d%1d%1d%1d%1d%1d%1d", a,
-            (byt >> 7) & 1, (byt >> 6) & 1, (byt >> 5) & 1, (byt >> 4) & 1,
-            (byt >> 3) & 1, (byt >> 2) & 1, (byt >> 1) & 1, (byt >> 0) & 1);
-    Serial.println(buf);
   }
 }
 
@@ -89,35 +39,57 @@ void ep_set_range(int n_bytes) {
   ep_write_data(n_bytes);
 }
 
-void setup() {
-  // put your setup code here, to run once:
+void process_cmd()
+{
+  if(scom_available()) {
+    status_set(true);
 
-  Serial.begin(115200);
-
-  eeprom_init();
-
-  delay(250);
-
-
-//  Serial.println("Writing EEPROM...");
-//  ep_clear(1024);
-
-  Serial.println("Reading EEPROM...");
-  ep_dump(128);
-  Serial.println("Clearing EEPROM...");
-  ep_set_range(256);
-  Serial.println("Reading EEPROM...");
-  ep_dump(128);
-  Serial.println("Done!");
+    Command cmd = read_cmd();
+    switch(cmd) {
+    case READ:
+      {
+        int offset = (int)read_u16();
+        long nbytes = (long)read_u16();
+        write_ack();
+        write_bytes(&memory[offset],nbytes);
+        check_ack();
+      }
+      break;
+    case WRITE:
+      {
+        int offset = (int)read_u16();
+        long nbytes = (long)read_u16();
+        write_ack();
+        read_bytes(&memory[offset],nbytes);
+        write_ack();
+      }
+      break;
+    case CLEAR:
+      clear_memory();
+      write_ack();
+      break;
+    default:
+      BAIL("Invalid command given");
+      break;
+    }
+    status_set(false);
+  }
 }
 
-byte input[80];
+void setup()
+{
+  scom_init();
+  eeprom_init();
+  status_init();
 
-void loop() {
-  if(Serial.available() > 0) {
-    Serial.read();
-    Serial.println("Reading EEPROM...");
-    ep_dump(512);
-    Serial.println("Done!");
-  }
+  status_set(true);
+  delay(1000);
+  status_set(false);
+}
+
+
+void loop()
+{
+  process_cmd();
+  delay(250);
 }
