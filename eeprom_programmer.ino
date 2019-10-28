@@ -64,7 +64,9 @@ void process_cmd()
         int offset = (int)read_u16();
         long nbytes = (long)read_u16();
         write_ack();
-        write_bytes(&memory[offset],nbytes);
+        gep_read(nbytes);
+        write_bytes(data,nbytes);
+        gep_write_data(nbytes);
         check_ack();
       }
       break;
@@ -74,13 +76,14 @@ void process_cmd()
         int offset = (int)read_u16();
         long nbytes = (long)read_u16();
         write_ack();
-        read_bytes(&memory[offset],nbytes);
+        read_bytes(data,nbytes);
+        gep_write_data(nbytes);
         write_ack();
       }
       break;
     case CLEAR:
       log_println("Received CLEAR command");
-      clear_memory();
+      gep_clear(1024);
       write_ack();
       break;
     default:
