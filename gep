@@ -89,10 +89,10 @@ class SerialComm:
         self.write_u32(key)
         self.check_ack()
         ans = self.read_u32()
-        if ans == ref:
-            self.write_ack()
-        else:
-            raise Exception("Failed performing handshake, mismatching data")
+        if ans != ref:
+            raise Exception("Failed performing handshake, mismatching data (sent {:08x}, expected {:08x}, got {:08x})".format(key,ref,ans))
+        self.write_ack()
+        self.check_ack()
 
     def process_read(self, offset, nbytes):
         self.write_cmd(Command.READ)
@@ -101,6 +101,7 @@ class SerialComm:
         self.check_ack()
         data = self._ser.read(nbytes)
         self.write_ack()
+        self.check_ack()
         return data
 
     def process_clear(self):

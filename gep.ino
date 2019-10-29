@@ -49,13 +49,13 @@ void process_cmd()
     switch(cmd) {
     case HANDSHAKE:
       {
-        char msgbuf[40];
         log_println("Received HANDSHAKE command");
         uint32_t data = read_u32();
         write_ack();
         data = ~data;
         write_u32(data);
         check_ack();
+        write_ack();
       }
       break;
     case READ:
@@ -68,6 +68,7 @@ void process_cmd()
         write_bytes(data,nbytes);
         gep_write_data(nbytes);
         check_ack();
+        write_ack();
       }
       break;
     case WRITE:
