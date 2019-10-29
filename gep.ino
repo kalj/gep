@@ -129,6 +129,7 @@ void process_cmd()
       BAIL("Invalid command given");
       break;
     }
+    log_println("Done processing command");
     status_set(false);
   }
 }
