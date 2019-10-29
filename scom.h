@@ -1,31 +1,23 @@
+
 #define SCOM_TIMEOUT 5000
 #define SCOM_BAUD_RATE 115200
 
-enum Command {
-  READ=1,
-  WRITE=2,
-  CLEAR=3,
-  HANDSHAKE=4,
-};
+// #define SCOM_DEV Serial
 
-enum Response {
-  ACK=10,
-  ERROR=20
-};
 
 void scom_init()
 {
-  Serial.begin(SCOM_BAUD_RATE);
-  Serial.setTimeout(SCOM_TIMEOUT);
+  SCOM_DEV.begin(SCOM_BAUD_RATE);
+  SCOM_DEV.setTimeout(SCOM_TIMEOUT);
 }
 
 bool scom_available()
 {
-  return Serial.available()>0;
+  return SCOM_DEV.available()>0;
 }
 
 void write_bytes(byte *mem, long nbytes, const char *errmsg = NULL) {
-  long bytesWritten = (long)Serial.write(mem,nbytes);
+  long bytesWritten = (long)SCOM_DEV.write(mem,nbytes);
   if(bytesWritten != nbytes) {
     if(errmsg) {
       BAIL(errmsg);
@@ -39,7 +31,7 @@ void write_bytes(byte *mem, long nbytes, const char *errmsg = NULL) {
 }
 
 void read_bytes(byte *mem, long nbytes, const char *errmsg = NULL) {
-  long  bytesRead = (long)Serial.readBytes((char*)mem,nbytes);
+  long  bytesRead = (long)SCOM_DEV.readBytes((char*)mem,nbytes);
   if(bytesRead != nbytes) {
     if(errmsg) {
       BAIL(errmsg);
@@ -61,7 +53,7 @@ Command read_cmd()
 
 void write_ack()
 {
-  Serial.write(ACK);
+  SCOM_DEV.write(ACK);
 }
 void check_ack()
 {
