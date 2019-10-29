@@ -6,7 +6,7 @@ BOARD_TAG = nano328
 BOARD_ID = arduino:avr:nano
 # ARDUINO_LIBS = <space separated list of libs, arduino.mk will try to guess>
 MONITOR_PORT = /dev/ttyUSB0
-SKETCH=eeprom_programmer.ino
+SKETCH=gep.ino
 
 
 
