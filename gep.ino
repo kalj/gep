@@ -48,7 +48,8 @@ void check_ack()
 // High-level EEPROM functions
 // ----------------------------------------
 
-byte data[1024];
+#define DATA_SIZE 512
+byte data[DATA_SIZE];
 
 void gep_read(int n_bytes)
 {
