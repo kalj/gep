@@ -44,30 +44,6 @@ void read_bytes(byte *mem, long nbytes, const char *errmsg = NULL) {
   }
 }
 
-Command read_cmd()
-{
-  byte b;
-  read_bytes(&b,1,"Failed reading command.");
-  return static_cast<Command>(b);
-}
-
-void write_ack()
-{
-  SCOM_DEV.write(ACK);
-}
-void check_ack()
-{
-  byte b;
-  read_bytes(&b,1,"Failed reading response.");
-
-  Response resp = static_cast<Response>(b);
-  if(resp != ACK) {
-    char buf[30];
-    sprintf(buf,"Did not receive ACK, instead %d",resp);
-    BAIL(buf);
-  }
-}
-
 uint16_t read_u16()
 {
   uint8_t bts[2];

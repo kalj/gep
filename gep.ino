@@ -39,6 +39,44 @@ void gep_set_range(int n_bytes) {
   gep_write_data(n_bytes);
 }
 
+enum Command {
+  READ=1,
+  WRITE=2,
+  CLEAR=3,
+  HANDSHAKE=4
+};
+
+enum Response {
+  ACK=10,
+  ERROR=20
+};
+
+Command read_cmd()
+{
+  byte b;
+  read_bytes(&b,1,"Failed reading command.");
+  return static_cast<Command>(b);
+}
+
+void write_ack()
+{
+  uint8_t b = (uint8_t)ACK;
+  write_bytes(&b,1,"Failed writing ACK");
+}
+
+void check_ack()
+{
+  byte b;
+  read_bytes(&b,1,"Failed reading response.");
+
+  Response resp = static_cast<Response>(b);
+  if(resp != ACK) {
+    char buf[30];
+    sprintf(buf,"Did not receive ACK, instead %d",resp);
+    BAIL(buf);
+  }
+}
+
 void process_cmd()
 {
   if(scom_available()) {
