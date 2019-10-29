@@ -27,14 +27,28 @@ bool scom_available()
 void write_bytes(byte *mem, long nbytes, const char *errmsg = NULL) {
   long bytesWritten = (long)Serial.write(mem,nbytes);
   if(bytesWritten != nbytes) {
-    BAIL(errmsg!=NULL?errmsg:"Failed writing correct number of bytes");
+    if(errmsg) {
+      BAIL(errmsg);
+    }
+    else {
+      char buf[80];
+      sprintf(buf,"Failed writing correct number of bytes, expected %ld, wrote %ld",nbytes,bytesWritten);
+      BAIL(buf);
+    }
   }
 }
 
 void read_bytes(byte *mem, long nbytes, const char *errmsg = NULL) {
   long  bytesRead = (long)Serial.readBytes((char*)mem,nbytes);
   if(bytesRead != nbytes) {
-    BAIL(errmsg!=NULL?errmsg:"Failed reading correct number of bytes");
+    if(errmsg) {
+      BAIL(errmsg);
+    }
+    else {
+      char buf[80];
+      sprintf(buf,"Failed reading correct number of bytes, expected %ld, got %ld",nbytes,bytesRead);
+      BAIL(buf);
+    }
   }
 }
 
