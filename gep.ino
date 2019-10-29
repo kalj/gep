@@ -154,6 +154,8 @@ void setup()
   status_set(true);
   delay(1000);
   status_set(false);
+
+  log_println("Starting up");
 }
 
 
