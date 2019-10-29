@@ -64,8 +64,8 @@ void check_ack()
 
 uint16_t read_u16()
 {
-  char bts[2];
-  read_bytes(bts,2,"Failed reading u16.");
+  uint8_t bts[2];
+  read_bytes((char *)bts,2,"Failed reading u16.");
   return ((uint16_t)bts[0]) | (((uint16_t)bts[1])<<8);
 }
 
@@ -77,8 +77,8 @@ void write_u16(uint16_t v)
 
 uint32_t read_u32()
 {
-  char bts[4];
-  read_bytes(bts,4,"Failed reading u32.");
+  uint8_t bts[4];
+  read_bytes((char*)bts,4,"Failed reading u32.");
   return ((uint32_t)bts[0]) | (((uint32_t)bts[1])<<8) | (((uint32_t)bts[2])<<16) | (((uint32_t)bts[3])<<24);
 }
 
