@@ -9,7 +9,7 @@ import sys
 from enum import Enum
 
 SERIAL_DEV='/dev/ttyUSB0'
-BAUD_RATE=115200
+BAUD_RATE=9600
 BYTES_PER_LINE=16
 
 def print_data(data):

@@ -1,6 +1,6 @@
 
 #define SCOM_TIMEOUT 5000
-#define SCOM_BAUD_RATE 115200
+#define SCOM_BAUD_RATE 9600
 
 #define SCOM_DEV Serial
 
