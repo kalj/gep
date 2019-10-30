@@ -2,6 +2,8 @@
 #include "eeprom.h"
 #include "scom.h"
 
+#define EEPROM_SIZE 32768
+
 enum Command {
   READ=1,
   WRITE=2,
@@ -51,35 +53,27 @@ void check_ack()
 #define DATA_SIZE 512
 byte data[DATA_SIZE];
 
-void gep_read(int n_bytes)
+void gep_read_data(uint16_t offset, uint16_t n_bytes)
 {
-  for(int i=0; i<n_bytes; i++) {
-    data[i] = read_byte(i);
+  for(uint16_t i=0; i<n_bytes; i++) {
+    data[i] = read_byte(offset+i);
   }
 }
 
-void gep_write_data(int n_bytes) {
-  for(int i=0; i<n_bytes; i++) {
-    write_byte(i,data[i]);
+void gep_write_data(uint16_t offset, uint16_t n_bytes) {
+  for(uint16_t i=0; i<n_bytes; i++) {
+    write_byte(offset+i,data[i]);
   }
 }
 
-void gep_fill(byte v, int n_bytes) {
-  for(int i=0; i<n_bytes; i++) {
-    data[i] = v;
+void gep_fill(byte v) {
+  for(uint16_t i=0; i<EEPROM_SIZE; i++) {
+    write_byte(i,v);
   }
-  gep_write_data(n_bytes);
 }
 
-void gep_clear(int n_bytes) {
-  gep_fill(0,n_bytes);
-}
-
-void gep_set_range(int n_bytes) {
-  for(int i=0; i<n_bytes; i++) {
-    data[i] = i;
-  }
-  gep_write_data(n_bytes);
+void gep_clear() {
+  gep_fill(0xff);
 }
 
 
@@ -109,12 +103,16 @@ void process_cmd()
     case READ:
       {
         log_println("Received READ command");
-        int offset = (int)read_u16();
-        long nbytes = (long)read_u16();
+        uint16_t offset = read_u16();
+        uint16_t nbytes = read_u16();
+        char buf[50];
+        sprintf(buf,"Parameters: offset=%u nbytes=%u",offset,nbytes);
+        log_println(buf);
         write_ack();
-        gep_read(nbytes);
+        gep_read_data(offset,nbytes);
+        log_println("Read data");
         write_bytes(data,nbytes);
-        gep_write_data(nbytes);
+        log_println("Transmitted data");
         check_ack();
         write_ack();
       }
@@ -122,17 +120,22 @@ void process_cmd()
     case WRITE:
       {
         log_println("Received WRITE command");
-        int offset = (int)read_u16();
-        long nbytes = (long)read_u16();
+        uint16_t offset = read_u16();
+        uint16_t nbytes = read_u16();
+        char buf[50];
+        sprintf(buf,"Parameters: offset=%u nbytes=%u",offset,nbytes);
+        log_println(buf);
         write_ack();
         read_bytes(data,nbytes);
-        gep_write_data(nbytes);
+        log_println("Received data");
+        gep_write_data(offset,nbytes);
+        log_println("Wrote data");
         write_ack();
       }
       break;
     case CLEAR:
       log_println("Received CLEAR command");
-      gep_clear(1024);
+      gep_clear();
       write_ack();
       break;
     default:

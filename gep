@@ -12,6 +12,8 @@ SERIAL_DEV='/dev/ttyUSB0'
 BAUD_RATE=9600
 BYTES_PER_LINE=16
 
+BLOCK_SIZE=512
+EEPROM_SIZE=32768
 def print_data(data):
     def chunks(l, n):
         """Yield successive n-sized chunks from l."""
@@ -183,11 +185,24 @@ if sys.argv[1] == 'read':
 
     with serial.Serial(SERIAL_DEV,BAUD_RATE) as ser:
         comm = SerialComm(ser)
-        data = comm.process_read(offset,nbytes)
+
+        n_bytes_left = nbytes
+        data_ptr=0
+        data = []
+        while n_bytes_left > 0:
+            bksize = min(BLOCK_SIZE,n_bytes_left)
+            print("Reading bytes {} - {}...".format(offset+data_ptr, offset+data_ptr+bksize))
+            block = comm.process_read(offset+data_ptr,bksize)
+            data += block
+            n_bytes_left -= bksize
+            data_ptr += bksize
+
+
         if format_table:
             print_data(data)
         else:
             sys.stdout.buffer.write(data)
+        print("Done!")
 
 elif sys.argv[1] == 'write':
     args = sys.argv[2:]
@@ -211,7 +226,17 @@ elif sys.argv[1] == 'write':
 
     with serial.Serial(SERIAL_DEV,BAUD_RATE) as ser:
         comm = SerialComm(ser)
-        comm.process_write(offset,nbytes,data)
+
+        n_bytes_left = nbytes
+        data_ptr=0
+        while n_bytes_left > 0:
+            bksize = min(BLOCK_SIZE,n_bytes_left)
+            print("Writing bytes {} - {}...".format(offset+data_ptr, offset+data_ptr+bksize))
+            block = data[data_ptr:(data_ptr+bksize)]
+            comm.process_write(offset+data_ptr, bksize, block)
+            n_bytes_left -= bksize
+            data_ptr += bksize
+        print("Done!")
 
 elif sys.argv[1] == 'clear':
     with serial.Serial(SERIAL_DEV,BAUD_RATE) as ser:
