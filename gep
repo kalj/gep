@@ -14,21 +14,28 @@ BYTES_PER_LINE=16
 
 BLOCK_SIZE=512
 EEPROM_SIZE=32768
-def print_data(data):
-    def chunks(l, n):
-        """Yield successive n-sized chunks from l."""
-        for i in range(0, len(l), n):
-            yield l[i:i + n]
 
+def print_data(data,offset=0):
 
     header=" addr |"+"".join([" {:2d}".format(i) for i in range(BYTES_PER_LINE)])
     print(header)
     print(' '+'-'*(len(header)-1))
 
-    base=0
-    for c in chunks(data,BYTES_PER_LINE):
-        print(" {:4d} |".format(base)+"".join([" {:02x}".format(b) for b in c]))
+    lineoffset=offset % BYTES_PER_LINE
+    base=offset-lineoffset
+    n_bytes_left = len(data)
+    dataptr=0
+
+    while n_bytes_left > 0:
+        chunk_size = min(n_bytes_left,BYTES_PER_LINE-lineoffset)
+        chunk = data[dataptr:(dataptr+chunk_size)]
+        elems=lineoffset*["   "]+[" {:02x}".format(b) for b in chunk]
+        print(" {:04x} |".format(base)+"".join(elems))
+
         base += BYTES_PER_LINE
+        dataptr += chunk_size
+        n_bytes_left -= chunk_size
+        lineoffset = 0 # only first time is relevant
 
 class Command(Enum):
     READ=1
@@ -199,7 +206,7 @@ if sys.argv[1] == 'read':
 
 
         if format_table:
-            print_data(data)
+            print_data(data,offset)
         else:
             sys.stdout.buffer.write(data)
         print("Done!")
