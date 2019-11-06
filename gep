@@ -198,7 +198,7 @@ if sys.argv[1] == 'read':
         data = []
         while n_bytes_left > 0:
             bksize = min(BLOCK_SIZE,n_bytes_left)
-            print("Reading bytes {} - {}...".format(offset+data_ptr, offset+data_ptr+bksize))
+            print("Reading bytes {} - {}...".format(offset+data_ptr, offset+data_ptr+bksize-1))
             block = comm.process_read(offset+data_ptr,bksize)
             data += block
             n_bytes_left -= bksize
@@ -238,7 +238,7 @@ elif sys.argv[1] == 'write':
         data_ptr=0
         while n_bytes_left > 0:
             bksize = min(BLOCK_SIZE,n_bytes_left)
-            print("Writing bytes {} - {}...".format(offset+data_ptr, offset+data_ptr+bksize))
+            print("Writing bytes {} - {}...".format(offset+data_ptr, offset+data_ptr+bksize-1))
             block = data[data_ptr:(data_ptr+bksize)]
             comm.process_write(offset+data_ptr, bksize, block)
             n_bytes_left -= bksize
@@ -253,7 +253,7 @@ elif sys.argv[1] == 'clear':
         data_ptr=0
         while n_bytes_left > 0:
             bksize = min(BLOCK_SIZE,n_bytes_left)
-            print("Clearing bytes {} - {}...".format(data_ptr, data_ptr+bksize))
+            print("Clearing bytes {} - {}...".format(data_ptr, data_ptr+bksize-1))
             block = bksize*b'\xff'
             comm.process_write(data_ptr, bksize, block)
             n_bytes_left -= bksize
