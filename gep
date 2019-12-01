@@ -2,6 +2,8 @@
 #
 #
 
+import os
+import argparse
 import time
 import serial
 import struct
@@ -167,104 +169,114 @@ def parse_size_args(args):
 
     return offset,nbytes
 
+if __name__ == '__main__':
 
-if len(sys.argv) < 2:
-    bail("No command given.")
+    parser = argparse.ArgumentParser(description='Generic EEPROM Programmer')
 
-if sys.argv[1] == '-h':
-    print_usage()
-    sys.exit(0)
+    parser.add_argument('-e','--eeprom', help='Specify model of EEPROM.',choices=['at28c256', 'at28c16'], default='at28c256')
+    subparsers = parser.add_subparsers(dest='command',required=True,metavar='command')
 
-if sys.argv[1] == 'read':
-    args = sys.argv[2:]
+    read_p = subparsers.add_parser("read", help="read data from EEPROM")
+    read_p.add_argument('-o', '--output', help='name of file to write output to (- for stdout)',default='-')
+    read_p.add_argument('-b', '--base',   help='byte offset to read from', type=int, default=0)
+    read_p.add_argument('-n', '--nbytes', help='number of bytes to read', type=int, default=1)
+    read_p.add_argument('-t', '--table',  help='format output into readable table', action='store_true')
 
-    format_table=False
-    if len(args) > 0 and args[0] == '-fmt':
-        args = args[1:]
-        format_table = True
+    write_p = subparsers.add_parser("write",help="write data to EEPROM")
+    write_p.add_argument('-i', '--input',  help='name of binary file to read (- for stdin)',required=True)
+    write_p.add_argument('-b','--base',    help='byte offset to write to', type=int, default=0)
 
-    if len(args) < 2:
-        bail("Too few arguments for 'read' command")
-    elif len(args) > 2:
-        bail("Too many arguments for 'read' command")
+    args = parser.parse_args()
 
-    offset,nbytes = parse_size_args(args)
+    print('EEPROM programmer')
+    print('Set up for EEPROM model:',args.eeprom)
 
-    with serial.Serial(SERIAL_DEV,BAUD_RATE) as ser:
-        comm = SerialComm(ser)
+    if args.command == 'read':
 
-        n_bytes_left = nbytes
-        data_ptr=0
-        data = []
-        while n_bytes_left > 0:
-            bksize = min(BLOCK_SIZE,n_bytes_left)
-            print("Reading bytes {} - {}...".format(offset+data_ptr, offset+data_ptr+bksize-1))
-            block = comm.process_read(offset+data_ptr,bksize)
-            data += block
-            n_bytes_left -= bksize
-            data_ptr += bksize
+        format_table=args.table
 
+        offset = args.base
+        nbytes = args.nbytes
 
-        if format_table:
-            print_data(data,offset)
+        with serial.Serial(SERIAL_DEV,BAUD_RATE) as ser:
+            comm = SerialComm(ser)
+            comm.process_handshake()
+
+            n_bytes_left = nbytes
+            data_ptr=0
+            data = []
+            while n_bytes_left > 0:
+                bksize = min(BLOCK_SIZE,n_bytes_left)
+                print("Reading bytes {} - {}...".format(offset+data_ptr, offset+data_ptr+bksize-1))
+                block = comm.process_read(offset+data_ptr,bksize)
+                data += block
+                n_bytes_left -= bksize
+                data_ptr += bksize
+
+            data = bytes(data)
+
+            if format_table:
+                print_data(data,offset)
+            else:
+                print(data)
+                sys.stdout.buffer.write(data)
+            print("Done!")
+
+    elif args.command == 'write':
+
+        offset = args.base
+
+        if args.input == '-':
+            data = sys.stdin.buffer.read()
         else:
-            sys.stdout.buffer.write(data)
-        print("Done!")
+            filename = args.input
+            if not os.path.exists(filename) or not os.path.isfile(filename):
+                bail("{} is not a valid file".format(filename))
 
-elif sys.argv[1] == 'write':
-    args = sys.argv[2:]
+            with open(filename, "rb") as fp:
+                data = fp.read()
+                # if len(data) != nbytes:
+                #     bail("Size of file '{}' is incompatible with nbytes={} given".format(len(data),nbytes))
 
-    if len(args) < 2:
-        bail("Too few arguments for 'write' command")
+        nbytes = len(data)
+        print('Writing {} bytes of data'.format(nbytes))
 
-    offset,nbytes = parse_size_args(args)
+        with serial.Serial(SERIAL_DEV,BAUD_RATE) as ser:
+            comm = SerialComm(ser)
+            comm.process_handshake()
 
-    if len(args) > 2:
-        filename = args[2]
-        if not os.path.exists(filename) or not os.path.isfile(filename):
-            bail("{} is not a valid file".format(filename))
+            n_bytes_left = nbytes
+            data_ptr=0
+            while n_bytes_left > 0:
+                bksize = min(BLOCK_SIZE,n_bytes_left)
+                print("Writing bytes {} - {}...".format(offset+data_ptr, offset+data_ptr+bksize-1))
+                block = data[data_ptr:(data_ptr+bksize)]
+                comm.process_write(offset+data_ptr, bksize, block)
+                n_bytes_left -= bksize
+                data_ptr += bksize
+            print("Done!")
 
-        with open(filename, "rb") as fp:
-            data = fp.read()
-            if len(data) != nbytes:
-                bail("Size of file '{}' is incompatible with nbytes={} given".format(len(data),nbytes))
+    elif args.command == 'clear':
+        with serial.Serial(SERIAL_DEV,BAUD_RATE) as ser:
+            comm = SerialComm(ser)
+            comm.process_handshake()
+
+            n_bytes_left = EEPROM_SIZE
+            data_ptr=0
+            while n_bytes_left > 0:
+                bksize = min(BLOCK_SIZE,n_bytes_left)
+                print("Clearing bytes {} - {}...".format(data_ptr, data_ptr+bksize-1))
+                block = bksize*b'\xff'
+                comm.process_write(data_ptr, bksize, block)
+                n_bytes_left -= bksize
+                data_ptr += bksize
+            print("Done!")
+
+    # elif sys.argv[1] == "handshake":
+    #     with serial.Serial(SERIAL_DEV,BAUD_RATE) as ser:
+    #         comm = SerialComm(ser)
+    #         comm.process_handshake()
     else:
-        data = sys.stdin.buffer.read(nbytes)
+        bail("Invalid command '{}' given.".format(args.command))
 
-    with serial.Serial(SERIAL_DEV,BAUD_RATE) as ser:
-        comm = SerialComm(ser)
-
-        n_bytes_left = nbytes
-        data_ptr=0
-        while n_bytes_left > 0:
-            bksize = min(BLOCK_SIZE,n_bytes_left)
-            print("Writing bytes {} - {}...".format(offset+data_ptr, offset+data_ptr+bksize-1))
-            block = data[data_ptr:(data_ptr+bksize)]
-            comm.process_write(offset+data_ptr, bksize, block)
-            n_bytes_left -= bksize
-            data_ptr += bksize
-        print("Done!")
-
-elif sys.argv[1] == 'clear':
-    with serial.Serial(SERIAL_DEV,BAUD_RATE) as ser:
-        comm = SerialComm(ser)
-
-        n_bytes_left = EEPROM_SIZE
-        data_ptr=0
-        while n_bytes_left > 0:
-            bksize = min(BLOCK_SIZE,n_bytes_left)
-            print("Clearing bytes {} - {}...".format(data_ptr, data_ptr+bksize-1))
-            block = bksize*b'\xff'
-            comm.process_write(data_ptr, bksize, block)
-            n_bytes_left -= bksize
-            data_ptr += bksize
-        print("Done!")
-
-elif sys.argv[1] == "handshake":
-    with serial.Serial(SERIAL_DEV,BAUD_RATE) as ser:
-        comm = SerialComm(ser)
-        comm.process_handshake()
-else:
-    bail("Invalid command '{}' given.".format(sys.argv[1]))
-
-sys.exit(0)
+    sys.exit(0)
