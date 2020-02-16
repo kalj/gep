@@ -10,7 +10,6 @@ import struct
 import sys
 from enum import Enum
 
-SERIAL_DEV='/dev/ttyUSB0'
 BAUD_RATE=9600
 BYTES_PER_LINE=16
 
@@ -173,6 +172,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Generic EEPROM Programmer')
 
+    parser.add_argument('-d','--device', help='Specify serial device.', default='/dev/ttyUSB0')
     parser.add_argument('-e','--eeprom', help='Specify model of EEPROM.',choices=['at28c256', 'at28c16'], default='at28c256')
     subparsers = parser.add_subparsers(dest='command',required=True,metavar='command')
 
@@ -188,7 +188,10 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
+    serial_device=args.device
+
     print('EEPROM programmer')
+    print('Connecting to programmer on serial device', serial_device)
     print('Set up for EEPROM model:',args.eeprom)
 
     if args.command == 'read':
@@ -198,7 +201,7 @@ if __name__ == '__main__':
         offset = args.base
         nbytes = args.nbytes
 
-        with serial.Serial(SERIAL_DEV,BAUD_RATE) as ser:
+        with serial.Serial(serial_device,BAUD_RATE) as ser:
             comm = SerialComm(ser)
             comm.process_handshake()
 
@@ -241,7 +244,7 @@ if __name__ == '__main__':
         nbytes = len(data)
         print('Writing {} bytes of data'.format(nbytes))
 
-        with serial.Serial(SERIAL_DEV,BAUD_RATE) as ser:
+        with serial.Serial(serial_device,BAUD_RATE) as ser:
             comm = SerialComm(ser)
             comm.process_handshake()
 
@@ -257,7 +260,7 @@ if __name__ == '__main__':
             print("Done!")
 
     elif args.command == 'clear':
-        with serial.Serial(SERIAL_DEV,BAUD_RATE) as ser:
+        with serial.Serial(serial_device,BAUD_RATE) as ser:
             comm = SerialComm(ser)
             comm.process_handshake()
 
@@ -273,7 +276,7 @@ if __name__ == '__main__':
             print("Done!")
 
     # elif sys.argv[1] == "handshake":
-    #     with serial.Serial(SERIAL_DEV,BAUD_RATE) as ser:
+    #     with serial.Serial(serial_device,BAUD_RATE) as ser:
     #         comm = SerialComm(ser)
     #         comm.process_handshake()
     else:
