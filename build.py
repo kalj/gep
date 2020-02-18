@@ -13,33 +13,30 @@ if __name__ == '__main__':
     parser.add_argument('-b','--board', help='Specify board type.', choices=['nano', 'mega'], default='mega')
     parser.add_argument("command", help="Specify command.", choices=["build", "upload"])
 
-    args = parser.parse_args()
+    pargs = parser.parse_args()
 
     sketch="gep.ino"
 
-    if args.board == 'nano':
+    if pargs.board == 'nano':
         board_id="arduino:avr:nano"
     else:
         board_id="arduino:avr:mega"
 
-    if args.command == "build":
-        command = "compile"
-    elif args.command == "upload":
-        command = "--upload"
+    build_dir=os.path.abspath("build-"+pargs.board)
 
-    device = args.device
+    if pargs.command == "build":
+        args = ["compile", "--fqbn", board_id, "--build-path", build_dir, "--build-cache-path", build_dir, "--warnings", "default"]
 
-    build_dir="build-"+args.board
+        if pargs.board == "mega":
+            args.extend(["--build-properties", "build.extra_flags=-DMEGA_SHIELD"])
 
-    # if not os.path.exists(build_dir):
-        # os.makedirs(build_dir)
+        args.append(sketch)
 
-    build_args = [command, "--fqbn", board_id] #, "--build-path", build_dir, "--build-cache-path", build_dir]
+    elif pargs.command == "upload":
+        hexfile = build_dir+"/"+sketch+".hex"
+        args = ["upload", "--fqbn", board_id, "--port", pargs.device, "--input", hexfile]
 
-    if args.board == "mega":
-        build_args.extend(["--build-properties", "build.extra_flags=-DMEGA_SHIELD"])
+    if pargs.verbose:
+        args.insert(0,"-v")
 
-    if args.verbose:
-        build_args.insert(0,"-v")
-
-    subprocess.run(["arduino-cli"]+build_args+[sketch])
+    subprocess.run(["arduino-cli"]+args)
