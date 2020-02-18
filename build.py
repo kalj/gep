@@ -25,7 +25,8 @@ if __name__ == '__main__':
     build_dir=os.path.abspath("build-"+pargs.board)
 
     if pargs.command == "build":
-        args = ["compile", "--fqbn", board_id, "--build-path", build_dir, "--build-cache-path", build_dir, "--warnings", "default"]
+        args = ["compile", "--fqbn", board_id,  "--warnings", "default",
+                "--build-path", build_dir, "--build-cache-path", build_dir, "--output", build_dir+"/output"]
 
         if pargs.board == "mega":
             args.extend(["--build-properties", "build.extra_flags=-DMEGA_SHIELD"])
