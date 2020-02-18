@@ -1,46 +1,13 @@
 
-#ifdef MEGA_SHIELD
-#define N_ZIF_PINS 28
-
-int zif_pins[] = {A0, A1, A2, A3, A4, A5, A6, A7, A8, A10, A9, A11, A12, A13,
-                  20, 19, 18, 17, 16, 15, 14,  2,  3,   4,  5,   6,   7,   8};
-int LED_PIN = 13;
-
-void setup() {
-  // put your setup code here, to run once:
-  Serial.begin(115200);
-  Serial.println("Hello!");
-
-  pinMode(LED_PIN, OUTPUT);
-
-  for(int i=0; i<N_ZIF_PINS; i++) {
-    pinMode(zif_pins[i], INPUT_PULLUP);
-  }
-
-}
-
-void loop() {
-  // put your main code here, to run repeatedly:
-
-  Serial.println();
-  Serial.println("  1  2  3  4  5  6  7  8  9 10 11 12 13 14|15 16 17 18 19 20 21 22 23 24 25 26 27 28");
-  for(int i=0; i<N_ZIF_PINS; i++) {
-    Serial.print("  ");
-    Serial.print(digitalRead(zif_pins[i]));
-  }
-  Serial.println();
-
-  digitalWrite(LED_PIN, 1);
-  delay(500);
-  digitalWrite(LED_PIN, 0);
-  delay(500);
-}
-
-#else
-
 #include "common.h"
-#include "eeprom.h"
 #include "scom.h"
+
+#ifdef MEGA_SHIELD
+#include "mega_shield_programmer.h"
+#else
+#include "nano_eater_programmer.h"
+#endif
+
 
 #define EEPROM_SIZE 32768
 
@@ -207,4 +174,3 @@ void loop()
   process_cmd();
   delay(250);
 }
-#endif

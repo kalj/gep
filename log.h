@@ -3,8 +3,16 @@
 
 #include <SoftwareSerial.h>
 // RX GREEN, TX WHITE
+
+#ifdef MEGA_SHIELD
+// we don't actually use these but let's set some pins to avoid divergent code
+#define LOG_RX_PIN 10
+#define LOG_TX_PIN 11
+#else
 #define LOG_RX_PIN A2
 #define LOG_TX_PIN A3
+#endif
+
 #define LOG_DEV mySerial
 SoftwareSerial LOG_DEV(LOG_RX_PIN, LOG_TX_PIN);
 
