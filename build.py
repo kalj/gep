@@ -18,7 +18,7 @@ if __name__ == '__main__':
     sketch="gep.ino"
 
     if pargs.board == 'nano':
-        board_id="arduino:avr:nano"
+        board_id="arduino:avr:nano:cpu=atmega328old"
     else:
         board_id="arduino:avr:mega"
 
