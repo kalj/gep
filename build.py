@@ -4,6 +4,7 @@
 import argparse
 import subprocess
 import os
+import sys
 
 if __name__ == '__main__':
 
@@ -40,4 +41,5 @@ if __name__ == '__main__':
     if pargs.verbose:
         args.insert(0,"-v")
 
-    subprocess.run(["arduino-cli"]+args)
+    ret = subprocess.run(["arduino-cli"]+args)
+    sys.exit(ret.returncode)
