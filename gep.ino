@@ -2,14 +2,7 @@
 #include "common.h"
 #include "scom.h"
 
-#ifdef MEGA_SHIELD
-#include "mega_shield_programmer.h"
-#else
-#include "nano_eater_programmer.h"
-#endif
-
-
-#define EEPROM_SIZE 32768
+#include "at28c.h"
 
 enum Command {
   READ=1,
@@ -63,19 +56,20 @@ byte data[DATA_SIZE];
 void gep_read_data(uint16_t offset, uint16_t n_bytes)
 {
   for(uint16_t i=0; i<n_bytes; i++) {
-    data[i] = read_byte(offset+i);
+    data[i] = at28c_read_byte(offset+i);
   }
 }
 
 void gep_write_data(uint16_t offset, uint16_t n_bytes) {
   for(uint16_t i=0; i<n_bytes; i++) {
-    write_byte(offset+i,data[i]);
+    at28c_write_byte(offset+i,data[i]);
   }
 }
 
 void gep_fill(byte v) {
-  for(uint16_t i=0; i<EEPROM_SIZE; i++) {
-    write_byte(i,v);
+  const int32_t eeprom_size = at28c_get_nbytes();
+  for(uint16_t i=0; i<eeprom_size; i++) {
+    at28c_write_byte(i,v);
   }
 }
 
@@ -159,7 +153,17 @@ void setup()
   log_init();
   status_init();
   scom_init();
-  eeprom_init();
+
+  ChipConfig at28c256 = {28, 15,
+                         {10, 9, 8, 7, 6, 5, 4, 3, 25, 24, 21, 23, 2, 26, 1},
+                         27, 20, 22, 8, {11, 12, 13, 15, 16, 17, 18, 19}};
+
+  ChipConfig at28c16 = {24, 11,
+                        {8, 7, 6, 5, 4, 3, 2, 1, 23, 22, 19},
+                        21, 18, 20, 8, {9, 10, 11, 13, 14, 15, 16, 17}};
+
+  at28c_init(at28c16);
+  /* at28c_init(at28c256); */
 
   status_set(true);
   delay(1000);
