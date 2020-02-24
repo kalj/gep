@@ -30,20 +30,20 @@ enum Response {
 Command read_cmd()
 {
   byte b;
-  read_bytes(&b,1,"Failed reading command.");
+  scom_read_bytes(&b,1,"Failed reading command.");
   return static_cast<Command>(b);
 }
 
 void write_ack()
 {
   uint8_t b = (uint8_t)ACK;
-  write_bytes(&b,1,"Failed writing ACK");
+  scom_write_bytes(&b,1,"Failed writing ACK");
 }
 
 void check_ack()
 {
   byte b;
-  read_bytes(&b,1,"Failed reading response.");
+  scom_read_bytes(&b,1,"Failed reading response.");
 
   Response resp = static_cast<Response>(b);
   if(resp != ACK) {
@@ -99,10 +99,10 @@ void process_cmd()
     case HANDSHAKE:
       {
         log_println("Received HANDSHAKE command");
-        uint32_t data = read_u32();
+        uint32_t data = scom_read_u32();
         write_ack();
         data = ~data;
-        write_u32(data);
+        scom_write_u32(data);
         check_ack();
         write_ack();
       }
@@ -110,15 +110,15 @@ void process_cmd()
     case READ:
       {
         log_println("Received READ command");
-        uint16_t offset = read_u16();
-        uint16_t nbytes = read_u16();
+        uint16_t offset = scom_read_u16();
+        uint16_t nbytes = scom_read_u16();
         char buf[50];
         sprintf(buf,"Parameters: offset=%u nbytes=%u",offset,nbytes);
         log_println(buf);
         write_ack();
         gep_read_data(offset,nbytes);
         log_println("Read data");
-        write_bytes(data,nbytes);
+        scom_write_bytes(data,nbytes);
         log_println("Transmitted data");
         check_ack();
         write_ack();
@@ -127,13 +127,13 @@ void process_cmd()
     case WRITE:
       {
         log_println("Received WRITE command");
-        uint16_t offset = read_u16();
-        uint16_t nbytes = read_u16();
+        uint16_t offset = scom_read_u16();
+        uint16_t nbytes = scom_read_u16();
         char buf[50];
         sprintf(buf,"Parameters: offset=%u nbytes=%u",offset,nbytes);
         log_println(buf);
         write_ack();
-        read_bytes(data,nbytes);
+        scom_read_bytes(data,nbytes);
         log_println("Received data");
         gep_write_data(offset,nbytes);
         log_println("Wrote data");
