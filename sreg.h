@@ -20,7 +20,7 @@ void sreg_init()
   delayMicroseconds(SREG_LATCH_TIME_US+SREG_SHIFT_TIME_US);
 }
 
-void pulse_latch()
+void sreg_pulse_latch()
 {
   // latch pin is assumed to always be in HIGH state outside of this function
   digitalWrite(SREG_LATCH,LOW);
@@ -29,7 +29,7 @@ void pulse_latch()
   delayMicroseconds(SREG_LATCH_TIME_US);
 }
 
-void shift_bit(byte b)
+void sreg_shift_bit(byte b)
 {
   digitalWrite(SREG_DATA,b);
   delayMicroseconds(SREG_SETUP_TIME_US);
