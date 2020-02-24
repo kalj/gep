@@ -1,3 +1,4 @@
+#include <assert.h>
 
 #define EEPROM_TIME_WRITE_US     1
 #define EEPROM_TIME_OUTPUT_US    1
@@ -153,7 +154,7 @@ void write_byte(uint16_t addr, byte data)
   byte msb = data & 0x80;
   for(int i=0; i<8; i++) {
     byte write_bit = (data >> i) & 1;
-    digitalWrite(DATA_PINS[i], write_bit);
+    digitalWrite(data_pins[i], write_bit);
   }
   digitalWrite(write_enable_pin, LOW);
   delayMicroseconds(EEPROM_TIME_WRITE_US);
@@ -162,7 +163,7 @@ void write_byte(uint16_t addr, byte data)
   // Poll for successful write
   byte b = read_byte(addr);
   while((b & 0x80) != msb) {
-    delay(POLL_DELAY);
+    delay(POLL_DELAY_MS);
     b = read_byte(addr);
   }
 }
