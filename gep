@@ -2,9 +2,9 @@
 #
 #
 
-import os
 import argparse
 import time
+from pathlib import Path
 import serial
 import struct
 import sys
@@ -224,8 +224,16 @@ if __name__ == '__main__':
             if format_table:
                 print_data(data,offset)
             else:
-                print(data)
-                sys.stdout.buffer.write(data)
+
+                if args.output == '-':
+                    sys.stdout.buffer.write(data)
+                else:
+                    out_path = Path(args.output)
+                    # if out_path.exists():
+                    #     bail(f"output file {out_path} already exists")
+
+                    out_path.write_bytes(data)
+
             print("Done!")
 
     elif args.command == 'write':
@@ -235,14 +243,11 @@ if __name__ == '__main__':
         if args.input == '-':
             data = sys.stdin.buffer.read()
         else:
-            filename = args.input
-            if not os.path.exists(filename) or not os.path.isfile(filename):
-                bail("{} is not a valid file".format(filename))
+            input_path = Path(args.input)
+            if not input_path.exists() or not input_path.is_file():
+                bail(f"{input_path} is not a valid file")
 
-            with open(filename, "rb") as fp:
-                data = fp.read()
-                # if len(data) != nbytes:
-                #     bail("Size of file '{}' is incompatible with nbytes={} given".format(len(data),nbytes))
+            data = input_path.read_bytes()
 
         nbytes = len(data)
         print('Writing {} bytes of data'.format(nbytes))
