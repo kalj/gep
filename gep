@@ -168,6 +168,9 @@ def parse_size_args(args):
 
     return offset,nbytes
 
+def auto_int(x):
+    return int(x,0)
+
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Generic EEPROM Programmer')
@@ -178,13 +181,13 @@ if __name__ == '__main__':
 
     read_p = subparsers.add_parser("read", help="read data from EEPROM")
     read_p.add_argument('-o', '--output', help='name of file to write output to (- for stdout)',default='-')
-    read_p.add_argument('-b', '--base',   help='byte offset to read from', type=int, default=0)
+    read_p.add_argument('-b', '--base',   help='byte offset to read from', type=auto_int, default=0)
     read_p.add_argument('-n', '--nbytes', help='number of bytes to read', type=int, default=1)
     read_p.add_argument('-t', '--table',  help='format output into readable table', action='store_true')
 
     write_p = subparsers.add_parser("write",help="write data to EEPROM")
     write_p.add_argument('-i', '--input',  help='name of binary file to read (- for stdin)',required=True)
-    write_p.add_argument('-b','--base',    help='byte offset to write to', type=int, default=0)
+    write_p.add_argument('-b','--base',    help='byte offset to write to', type=auto_int, default=0)
 
     args = parser.parse_args()
 
