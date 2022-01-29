@@ -7,6 +7,8 @@ import time
 from pathlib import Path
 import serial
 import struct
+import io
+import intelhex
 import sys
 from enum import Enum
 
@@ -182,7 +184,7 @@ def read_data(serial_device, nbytes, offset):
         data = []
         while n_bytes_left > 0:
             bksize = min(BLOCK_SIZE,n_bytes_left)
-            print("Reading bytes {} - {}...".format(offset+data_ptr, offset+data_ptr+bksize-1))
+            print("Reading bytes 0x{:x} - 0x{:x}...".format(offset+data_ptr, offset+data_ptr+bksize-1))
             block = comm.process_read(offset+data_ptr,bksize)
             data += block
             n_bytes_left -= bksize
@@ -199,11 +201,20 @@ def write_data(serial_device, data, offset):
         data_ptr=0
         while n_bytes_left > 0:
             bksize = min(BLOCK_SIZE,n_bytes_left)
-            print("Writing bytes {} - {}...".format(offset+data_ptr, offset+data_ptr+bksize-1))
+            print("Writing bytes 0x{:x} - 0x{:x}...".format(offset+data_ptr, offset+data_ptr+bksize-1))
             block = data[data_ptr:(data_ptr+bksize)]
             comm.process_write(offset+data_ptr, bksize, block)
             n_bytes_left -= bksize
             data_ptr += bksize
+
+def verify_data(serial_device, offset, ref_data):
+    data_read = read_data(serial_device, len(ref_data), offset)
+    for i in range(len(ref_data)):
+        if ref_data[i] != data_read[i]:
+            r = data_read[i]
+            e = ref_data[i]
+            addr = offset + i
+            raise RuntimeError(f'Verification failed for data at address {addr:x}. Read {r:x}, expected {e:x}')
 
 
 def auto_int(x):
@@ -225,6 +236,7 @@ if __name__ == '__main__':
 
     write_p = subparsers.add_parser("write",help="write data to EEPROM")
     write_p.add_argument('-i', '--input',  help='name of binary file to read (- for stdin)',required=True)
+    write_p.add_argument('-f', '--format', help='format of input file (hex or bin)', choices=['hex', 'bin'])
     write_p.add_argument('-b','--base',    help='byte offset to write to', type=auto_int, default=0)
     write_p.add_argument('-v','--verify',  help='verify data written', action='store_true')
 
@@ -257,6 +269,9 @@ if __name__ == '__main__':
 
     elif args.command == 'write':
 
+        # binary by default
+        fmt = 'bin'
+
         if args.input == '-':
             data = sys.stdin.buffer.read()
         else:
@@ -264,20 +279,43 @@ if __name__ == '__main__':
             if not input_path.exists() or not input_path.is_file():
                 bail(f"{input_path} is not a valid file")
 
+            if input_path.suffix in ['.bin', '.hex']:
+                fmt = input_path.suffix[1:]
             data = input_path.read_bytes()
 
-        print(f'Writing {len(data)} bytes of data')
-        write_data(serial_device, data, args.base)
-        print("Done!")
+        # --format overrides
+        if args.format is not None:
+            fmt = args.format
 
-        if args.verify:
-            print('Verifying written data...')
+        if fmt == 'bin':
+            print(f'Writing {len(data)} bytes of data at address 0x{args.base:x}')
+            write_data(serial_device, data, args.base)
+            print("Done!")
 
-            data_read = read_data(serial_device, len(data), args.base)
-            for i in range(len(data)):
-                if data[i] != data_read[i]:
-                    raise RuntimeError(f'Mismatch in data read and written at index {i}! Read {data_read[i]:x}, expected {data[i]:x}')
+            if args.verify:
+                print('Verifying written data...')
+                verify_data(serial_device, args.base, data)
+                print('All good!')
+        else: # 'hex'
 
+            ih = intelhex.IntelHex()
+            sio = io.StringIO(data.decode())
+            ih.loadhex(sio)
+            sio.close()
+
+            for segm_base,segm_end in ih.segments():
+                segm_data = ih[segm_base:segm_end].tobinstr()
+
+                print(f'Writing segment of {len(segm_data)} bytes of data at address 0x{segm_base:x}')
+                write_data(serial_device, segm_data, segm_base)
+            print("Done!")
+
+            if args.verify:
+                print('Verifying written data...')
+                for segm_base,segm_end in ih.segments():
+                    segm_data = ih[segm_base:segm_end].tobinstr()
+                    verify_data(serial_device, segm_base, segm_data)
+                print('All good!')
 
     elif args.command == 'clear':
         with serial.Serial(serial_device,BAUD_RATE) as ser:
