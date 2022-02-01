@@ -3,8 +3,10 @@
 
 import argparse
 import subprocess
-import os
+import pathlib
 import sys
+
+ARDUINO_CLI='arduino-cli'
 
 if __name__ == '__main__':
 
@@ -23,23 +25,27 @@ if __name__ == '__main__':
     else:
         board_id="arduino:avr:mega"
 
-    build_dir=os.path.abspath("build-"+pargs.board)
+    output_dir=pathlib.Path("output-"+pargs.board)
+    build_dir=pathlib.Path("build-"+pargs.board)
 
     if pargs.command == "build":
         args = ["compile", "--fqbn", board_id,  "--warnings", "default",
-                "--build-path", build_dir, "--build-cache-path", build_dir, "--output", build_dir+"/output"]
+                '--build-cache-path', build_dir,
+                '--build-path', build_dir,
+                '--output-dir', output_dir]
 
         if pargs.board == "mega":
-            args.extend(["--build-properties", "build.extra_flags=-DMEGA_SHIELD"])
+            args.extend(["--build-property", "build.extra_flags=-DMEGA_SHIELD"])
 
         args.append(sketch)
 
     elif pargs.command == "upload":
-        hexfile = build_dir+"/"+sketch+".hex"
-        args = ["upload", "--fqbn", board_id, "--port", pargs.device, "--input", hexfile]
+        hexfile = output_dir / (sketch+".hex")
+        args = ["upload", "--fqbn", board_id, "--port", pargs.device, "--input-dir", output_dir]
 
     if pargs.verbose:
         args.insert(0,"-v")
 
-    ret = subprocess.run(["arduino-cli"]+args)
+    print("running:", ' '.join(map(str,[ARDUINO_CLI]+args)))
+    ret = subprocess.run([ARDUINO_CLI]+args)
     sys.exit(ret.returncode)
