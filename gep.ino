@@ -61,15 +61,34 @@ void gep_read_data(uint16_t offset, uint16_t n_bytes)
 }
 
 void gep_write_data(uint16_t offset, uint16_t n_bytes) {
-  for(uint16_t i=0; i<n_bytes; i++) {
-    at28c_write_byte(offset+i,data[i]);
+
+  uint16_t i = 0;
+  while(i < n_bytes) {
+    const uint16_t bytes_left = n_bytes-i;
+    const uint8_t offset_in_page = ((offset+i)%AT28C_PAGE_SIZE);
+    uint8_t page_size = AT28C_PAGE_SIZE-offset_in_page;
+    if(bytes_left < (uint16_t)page_size) {
+      page_size = (uint8_t)bytes_left;
+    }
+
+    at28c_write_page(offset+i,&data[i], page_size);
+
+    i += page_size;
   }
 }
 
 void gep_fill(byte v) {
+
   const int32_t eeprom_size = at28c_get_nbytes();
-  for(uint16_t i=0; i<eeprom_size; i++) {
-    at28c_write_byte(i,v);
+
+  uint16_t addr = 0;
+  while(addr < eeprom_size) {
+    uint8_t page_size = (uint8_t)(eeprom_size-addr);
+    if(page_size > AT28C_PAGE_SIZE) {
+      page_size = AT28C_PAGE_SIZE;
+    }
+    at28c_fill_page(addr, v, page_size);
+    addr += page_size;
   }
 }
 
@@ -162,8 +181,8 @@ void setup()
                         {8, 7, 6, 5, 4, 3, 2, 1, 23, 22, 19},
                         21, 18, 20, 8, {9, 10, 11, 13, 14, 15, 16, 17}};
 
-  at28c_init(at28c16);
-  /* at28c_init(at28c256); */
+  /* at28c_init(at28c16); */
+  at28c_init(at28c256);
 
   status_set(true);
   delay(1000);
